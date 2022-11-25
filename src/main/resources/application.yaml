@@ -1,0 +1,22 @@
+info:
+  app:
+    name: @project.artifactId@
+    version: @project.version@
+spring:
+#  codec:
+#    max-in-memory-size: 3999962144MB
+  profiles:
+    active: dev
+  rsocket:
+    server:
+      port: 8081
+  output:
+    ansi:
+      enabled: always
+server:
+  port: 8085
+
+scheduler:
+  thread:
+    pool:
+      size: 5
