@@ -15,6 +15,13 @@ public class Stock {
 
     private Double divYield;
 
+    private Double marketCap; //in trillion
+
+    private Double peRatio;
+
+    private Double epsRatio;
+
+
     public Stock(String ticker, String fullUri) {
         this.ticker = ticker;
         this.fullUri = fullUri;

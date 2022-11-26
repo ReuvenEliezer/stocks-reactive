@@ -27,7 +27,9 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 @Component
@@ -202,27 +204,36 @@ public class OnReadyEvent implements ApplicationListener<ApplicationReadyEvent> 
 
     private Stock extractData(String result, Stock stock) {
         Document html = Jsoup.parse(result);
-        extractDivYieldData(html, stock);
-        extractPriceData(html, stock);
+        extractData(html, stock);
         return stock;
     }
 
     private void extractPriceData(Document html, Stock stock) {
-        //TODO impl
-//        stock.setPrice();
+        String priceAsText = html.body().getElementsByClass("Fw(b) Fz(36px) Mb(-4px) D(ib)").text();
+        stock.setPrice(Double.parseDouble(priceAsText));
     }
 
-    private void extractDivYieldData(Document html, Stock stock) {
+
+    private void extractData(Document html, Stock stock) {
+        extractPriceData(html, stock);
         Elements elementsByClass = html.body().getElementsByClass("Ta(end) Fw(600) Lh(14px)");
-        Element element = findElement(elementsByClass, "DIVIDEND_AND_YIELD-value");
-        String text = element.text();
-        String dividendYield = StringUtils.substringBetween(text, "(", "%");
+        String dividendYieldText = findElement(elementsByClass, "DIVIDEND_AND_YIELD-value").text();
+        String dividendYield = StringUtils.substringBetween(dividendYieldText, "(", "%");
         stock.setDivYield(Double.parseDouble(dividendYield));
+        stock.setPeRatio(Double.parseDouble(findElement(elementsByClass, "PE_RATIO-value").text()));
+        stock.setEpsRatio(Double.parseDouble(findElement(elementsByClass, "EPS_RATIO-value").text()));
+        String marketCapValue = findElement(elementsByClass, "MARKET_CAP-value").text();
+        stock.setMarketCap(Double.parseDouble(StringUtils.substring(marketCapValue, 0, marketCapValue.length() - 1)));
+    }
+
+    private <T> void setValueIfExist(Supplier<T> getter, Consumer<T> setter) {
+        if (getter.get() != null) {
+            setter.accept(getter.get());
+        }
     }
 
     private Element findElement(Elements elements, String elementName) {
-        Element element1 = elements.stream().filter(element -> element.attributes().get("data-test").equals(elementName)).findAny().orElseThrow();
-        return element1;
+        return elements.stream().filter(element -> element.attributes().get("data-test").equals(elementName)).findAny().orElseThrow();
     }
 
 }
