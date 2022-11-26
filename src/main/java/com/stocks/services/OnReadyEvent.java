@@ -21,15 +21,13 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Component
@@ -56,8 +54,8 @@ public class OnReadyEvent implements ApplicationListener<ApplicationReadyEvent> 
         StopWatch stopWatch = new StopWatch();
         stopWatch.start("reading excel file");
         logger.info("onApplicationEvent");
-//        List<String> stocksTickers = readFile();
-        List<String> stocksTickers = readExcelFile();
+        List<String> stocksTickers = readFile();
+//        List<String> stocksTickers = readExcelFile();
         stopWatch.stop();
 
         stopWatch.start("mapping and prepare rest call");
@@ -72,10 +70,7 @@ public class OnReadyEvent implements ApplicationListener<ApplicationReadyEvent> 
         Map<String, Stock> stockTickerToDataMap = new ConcurrentHashMap<>(stockTickerToDivValueMap.size());
 
         stopWatch.start("block and fill data");
-        Flux.fromIterable(stockTickerToDivValueMap.values())
-                .flatMap(Function.identity())
-                .doOnNext(stock -> stockTickerToDataMap.put(stock.getTicker(), stock))
-                .blockLast();
+        Flux.fromIterable(stockTickerToDivValueMap.values()).flatMap(Function.identity()).doOnNext(stock -> stockTickerToDataMap.put(stock.getTicker(), stock)).blockLast();
 
 //        Flux.just(stockTickerToDivValueMap.values()).flatMap(Flux::fromIterable).blockLast();
 //        Flux.concat(stockTickerToDivValueMap.values())
@@ -86,10 +81,13 @@ public class OnReadyEvent implements ApplicationListener<ApplicationReadyEvent> 
         System.out.println(stockTickerToDataMap);
         stopWatch.stop();
 
-        stopWatch.start("write to csv");
+        stopWatch.start("write to Csv file");
         writeToCsv(stockTickerToDataMap);
-
         stopWatch.stop();
+        stopWatch.start("write to Excel file");
+        writeToExcel(stockTickerToDataMap);
+        stopWatch.stop();
+
         System.out.println(stopWatch.prettyPrint());
 
         seekingAlpha();
@@ -99,13 +97,45 @@ public class OnReadyEvent implements ApplicationListener<ApplicationReadyEvent> 
 
     }
 
-    public static String getStocksTickersPath(String fileName) {
-        return "src" + File.separator + "main" + File.separator + "resources" + File.separator + "static" + File.separator + fileName;
+    private void writeToExcel(Map<String, Stock> stockTickerToDataMap) {
+        Workbook workbook = prepareExcelFile(stockTickerToDataMap);
+        try (FileOutputStream outputStream = new FileOutputStream(getStocksTickersPath(stocksTickersExcelFileName))) {
+            workbook.write(outputStream);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        } finally {
+            try {
+                workbook.close();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
-    private List<String> readFile() throws IOException {
-        try (Stream<String> lines = Files.lines(Paths.get(getStocksTickersPath(stocksTickersFileName)), StandardCharsets.UTF_8)) {
-            return lines.toList();
+    private Workbook prepareExcelFile(Map<String, Stock> stockTickerToDataMap) {
+        try (FileInputStream inputStream = new FileInputStream(getStocksTickersPath(stocksTickersExcelFileName))) {
+            Workbook workbook = WorkbookFactory.create(inputStream);
+            Sheet sheet = workbook.getSheet("All");
+            int startRowIndex = 3;
+            int symbolColumnIndex = 0;
+            for (int rowIndex = startRowIndex; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
+                Row row = sheet.getRow(rowIndex);
+
+                Cell symbol = row.getCell(symbolColumnIndex);
+                Stock stock = stockTickerToDataMap.get(symbol.getStringCellValue());
+
+                if (stock != null) {
+                    if (stock.getDivYield() != null) {
+                        Cell divYieldColIndex = row.createCell(symbolColumnIndex + 6);
+                        divYieldColIndex.setCellValue(stock.getDivYield());
+                    }
+                }
+            }
+            return workbook;
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -127,6 +157,16 @@ public class OnReadyEvent implements ApplicationListener<ApplicationReadyEvent> 
             }
         }
         return stocksTickers;
+    }
+
+    public static String getStocksTickersPath(String fileName) {
+        return "src" + File.separator + "main" + File.separator + "resources" + File.separator + "static" + File.separator + fileName;
+    }
+
+    private List<String> readFile() throws IOException {
+        try (Stream<String> lines = Files.lines(Paths.get(getStocksTickersPath(stocksTickersFileName)), StandardCharsets.UTF_8)) {
+            return lines.toList();
+        }
     }
 
     private void seekingAlpha() {
@@ -154,18 +194,9 @@ public class OnReadyEvent implements ApplicationListener<ApplicationReadyEvent> 
 //        ResponseEntity<String> data1 = restTemplate.getForEntity(fullUri, String.class);
 //        extractData(data1.getBody(), stockTicker);
         Stock stock = new Stock(stockTicker.toUpperCase(), fullUri);
-        return webClient.get()
-                .uri(fullUri)
-                .retrieve()
-                .bodyToMono(String.class)
-                .retry(MAX_RETRY)
-                .map(data -> extractData(data, stock))
-                .doOnError(e -> {
-                    logger.error("failed to retrieve on url {}", fullUri, e);
-                })
-                .doOnRequest(t -> logger.info("doOnRequest to retrieve {}", fullUri))
-                .onErrorReturn(stock)
-                ;//                .flatMapMany(Flux::fromIterable)
+        return webClient.get().uri(fullUri).retrieve().bodyToMono(String.class).retry(MAX_RETRY).map(data -> extractData(data, stock)).doOnError(e -> {
+            logger.error("failed to retrieve on url {}", fullUri, e);
+        }).doOnRequest(t -> logger.info("doOnRequest to retrieve {}", fullUri)).onErrorReturn(stock);//                .flatMapMany(Flux::fromIterable)
 
     }
 

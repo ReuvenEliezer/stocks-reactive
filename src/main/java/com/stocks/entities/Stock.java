@@ -11,9 +11,9 @@ public class Stock {
     private String ticker;
     private String fullUri;
 
-    private double price;
+    private Double price;
 
-    private double divYield;
+    private Double divYield;
 
     public Stock(String ticker, String fullUri) {
         this.ticker = ticker;
