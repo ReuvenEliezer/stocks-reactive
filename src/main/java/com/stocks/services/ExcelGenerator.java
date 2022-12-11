@@ -1,20 +1,17 @@
 package com.stocks.services;
 
+import com.stocks.entities.ExcelData;
 import com.stocks.entities.Stock;
-import lombok.SneakyThrows;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.ss.usermodel.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.ApplicationListener;
-import org.springframework.stereotype.Component;
-
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 import org.springframework.util.StopWatch;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -25,39 +22,40 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
-@Component
-public class OnReadyEvent implements ApplicationListener<ApplicationReadyEvent> {
+public class ExcelGenerator {
 
-    private static final Logger logger = LoggerFactory.getLogger(OnReadyEvent.class);
+    private static final Logger logger = LoggerFactory.getLogger(ExcelGenerator.class);
 
     private static final String uri = "https://finance.yahoo.com/quote/%s/";//https://seekingalpha.com/symbol/ATO/dividends/yield";
     private static final int MAX_RETRY = 3;
 
     private static final String stocksTickersFileName = "stocks_tickers.txt";
-    private static final String stocksTickersExcelFileName = "U.S.DividendChampions-LIVE.xlsx";
+    private final ExcelData excelData;
 
-    @Autowired
-    private RestTemplate restTemplate;
-
-    @Autowired
     private WebClient webClient;
 
+    @Autowired
+    public ExcelGenerator(WebClient webClient, ExcelData excelData) {
+        this.webClient = webClient;
+        this.excelData = excelData;
+    }
 
-    @SneakyThrows
-    @Override
-    public void onApplicationEvent(ApplicationReadyEvent applicationReadyEvent) {
+    public void update() throws IOException {
         StopWatch stopWatch = new StopWatch();
         stopWatch.start("reading excel file");
         logger.info("onApplicationEvent");
-        List<String> stocksTickers = readFile();
-//        List<String> stocksTickers = readExcelFile();
+//        List<String> stocksTickers = readFile();
+        List<String> stocksTickers = readExcelFile();
         stopWatch.stop();
 
         stopWatch.start("mapping and prepare rest call");
@@ -101,7 +99,8 @@ public class OnReadyEvent implements ApplicationListener<ApplicationReadyEvent> 
 
     private void writeToExcel(Map<String, Stock> stockTickerToDataMap) {
         Workbook workbook = prepareExcelFile(stockTickerToDataMap);
-        try (FileOutputStream outputStream = new FileOutputStream(getStocksTickersPath(stocksTickersExcelFileName))) {
+        try (FileOutputStream outputStream = new FileOutputStream(getStocksTickersPath(excelData.getFileName()))) {
+            workbook.setForceFormulaRecalculation(true);
             workbook.write(outputStream);
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -115,21 +114,24 @@ public class OnReadyEvent implements ApplicationListener<ApplicationReadyEvent> 
     }
 
     private Workbook prepareExcelFile(Map<String, Stock> stockTickerToDataMap) {
-        try (FileInputStream inputStream = new FileInputStream(getStocksTickersPath(stocksTickersExcelFileName))) {
+        try (FileInputStream inputStream = new FileInputStream(getStocksTickersPath(excelData.getFileName()))) {
             Workbook workbook = WorkbookFactory.create(inputStream);
-            Sheet sheet = workbook.getSheet("All");
-            int startRowIndex = 3;
-            int symbolColumnIndex = 0;
-            for (int rowIndex = startRowIndex; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
+            Sheet sheet = workbook.getSheet(excelData.getSheetName());
+            for (int rowIndex = excelData.getStartRowIndex(); rowIndex <= excelData.getTotalRows(); rowIndex++) {
                 Row row = sheet.getRow(rowIndex);
 
-                Cell symbol = row.getCell(symbolColumnIndex);
+                Cell symbol = row.getCell(excelData.getSymbolColumnIndex());
                 Stock stock = stockTickerToDataMap.get(symbol.getStringCellValue());
 
                 if (stock != null) {
-                    if (stock.getDivYield() != null) {
-                        Cell divYieldColIndex = row.createCell(symbolColumnIndex + 6);
-                        divYieldColIndex.setCellValue(stock.getDivYield());
+                    if (stock.getPrice() != null && excelData.isUpdatePrice()) {
+                        Cell price = row.createCell(excelData.getPriceColumnIndex());
+                        price.setCellValue(stock.getPrice());
+                    }
+
+                    if (stock.getDivYield() != null && excelData.isUpdateDivYield()) {
+                        Cell divYield = row.createCell(excelData.getDivYieldColumnIndex());
+                        divYield.setCellValue(stock.getDivYield());
                     }
                 }
             }
@@ -143,13 +145,12 @@ public class OnReadyEvent implements ApplicationListener<ApplicationReadyEvent> 
 
     private List<String> readExcelFile() throws IOException {
         List<String> stocksTickers = new ArrayList<>();
-        try (Workbook workbook = WorkbookFactory.create(new File(getStocksTickersPath(stocksTickersExcelFileName)))) {
-            Sheet sheet = workbook.getSheet("All");
-            int startRowIndex = 3;
-            int symbolColumnIndex = 0;
-            for (int rowIndex = startRowIndex; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
+        try (Workbook workbook = WorkbookFactory.create(new File(getStocksTickersPath(excelData.getFileName())))) {
+            Sheet sheet = workbook.getSheet(excelData.getSheetName());
+
+            for (int rowIndex = excelData.getStartRowIndex(); rowIndex <= excelData.getTotalRows(); rowIndex++) {
                 Row row = sheet.getRow(rowIndex);
-                Cell cell = row.getCell(symbolColumnIndex);
+                Cell cell = row.getCell(excelData.getSymbolColumnIndex());
                 if (cell != null) {
                     // Found column and there is value in the cell.
                     stocksTickers.add(cell.getStringCellValue());

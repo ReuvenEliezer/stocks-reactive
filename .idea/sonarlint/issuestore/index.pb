@@ -7,8 +7,6 @@ t
 Dsrc/main/java/com/stocks/controllers/ExceptionHandlerController.java,5\b\5b944ed101a9f30017205f25f0eb13a10315d22b
 k
 ;src/main/java/com/stocks/controllers/RSocketController.java,2\d\2d3e2fd4739b20e4bd7fc9c184a373ed118ac942
-k
-;src/main/java/com/stocks/controllers/RoutingController.java,e\8\e88d1a0f2bdcae857d7c4f00c7dab77a733c2bc2
 ^
 .src/main/java/com/stocks/entities/Request.java,7\1\71f222a15d7d4254e757f58c06be1ed81e03618a
 _
@@ -21,9 +19,8 @@ k
 ;src/main/java/com/stocks/services/TweetTaskServiceImpl.java,5\c\5c6501dcb81de976970afad16073c996c55a91c6
 g
 7src/main/java/com/stocks/services/TweetTaskService.java,6\6\669c6119e319ae60db8d842c02f9e0804531fdb8
-c
-3src/main/java/com/stocks/services/SocketClient.java,4\0\40bb768d89bccd17dbeb535a3b3f502e6f7c0846
 d
 4src/main/java/com/stocks/services/CacheAccessor.java,4\a\4a87aa774e3d3917f56f2f98f11d820f52f53bfb
-7
-pom.xml,4\4\442292b8a7efeabbe4cc176709b833b1792140ec
+:
+
+.gitignore,a\5\a5cc2925ca8258af241be7e5b0381edf30266302
