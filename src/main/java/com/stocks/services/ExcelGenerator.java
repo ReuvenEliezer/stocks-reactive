@@ -121,18 +121,21 @@ public class ExcelGenerator {
                 Row row = sheet.getRow(rowIndex);
 
                 Cell symbol = row.getCell(excelData.getSymbolColumnIndex());
-                Stock stock = stockTickerToDataMap.get(symbol.getStringCellValue());
+                try {
+                    Stock stock = stockTickerToDataMap.get(symbol.getStringCellValue());
+                    if (stock != null) {
+                        if (stock.getPrice() != null && excelData.isUpdatePrice()) {
+                            Cell price = row.createCell(excelData.getPriceColumnIndex());
+                            price.setCellValue(stock.getPrice());
+                        }
 
-                if (stock != null) {
-                    if (stock.getPrice() != null && excelData.isUpdatePrice()) {
-                        Cell price = row.createCell(excelData.getPriceColumnIndex());
-                        price.setCellValue(stock.getPrice());
+                        if (stock.getDivYield() != null && excelData.isUpdateDivYield()) {
+                            Cell divYield = row.createCell(excelData.getDivYieldColumnIndex());
+                            divYield.setCellValue(stock.getDivYield());
+                        }
                     }
-
-                    if (stock.getDivYield() != null && excelData.isUpdateDivYield()) {
-                        Cell divYield = row.createCell(excelData.getDivYieldColumnIndex());
-                        divYield.setCellValue(stock.getDivYield());
-                    }
+                } catch (Exception e) {
+                    logger.error("failed to update stock in rowIndex '{}'", rowIndex);
                 }
             }
             return workbook;
@@ -151,7 +154,7 @@ public class ExcelGenerator {
             for (int rowIndex = excelData.getStartRowIndex(); rowIndex <= excelData.getTotalRows(); rowIndex++) {
                 Row row = sheet.getRow(rowIndex);
                 Cell cell = row.getCell(excelData.getSymbolColumnIndex());
-                if (cell != null) {
+                if (cell != null && cell.getCellType().equals(CellType.STRING)) {
                     // Found column and there is value in the cell.
                     stocksTickers.add(cell.getStringCellValue());
                     // Do something with the cellValueMaybeNull here ...

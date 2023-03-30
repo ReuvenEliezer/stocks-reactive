@@ -30,8 +30,20 @@ public class StockTest {
 
     @Test
     public void excelGeneratorFullDataTest() throws IOException {
-        ExcelData excelData = new ExcelData("U.S.DividendChampions-2022-11-30-8271 (2).xlsx", "All CCC", 6, 1, false, true,
-                8, 9, 719);
+//        ExcelData excelData = ExcelData.builder()
+//                .fileName("U.S.DividendChampions-2023-02-28-5519.xlsx")
+//                .sheetName("All CCC")
+//                .startRowIndex(6)
+//                .symbolColumnIndex(1)
+//                .isUpdateDivYield(false)
+//                .isUpdatePrice(true)
+//                .priceColumnIndex(8)
+//                .divYieldColumnIndex(9)
+//                .totalRows(714)
+//                .build();
+        ExcelData excelData = new ExcelData("U.S.DividendChampions-2023-02-28-5519.xlsx",
+                "All CCC", 6, 1, false, true,
+                8, 9, 714);
         ExcelGenerator excelGenerator = new ExcelGenerator(webClient, excelData);
         excelGenerator.update();
     }
