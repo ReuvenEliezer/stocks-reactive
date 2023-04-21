@@ -3,6 +3,7 @@ package com.stocks.services;
 import com.stocks.entities.ExcelData;
 import com.stocks.entities.Stock;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.poi.ss.usermodel.*;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -78,7 +79,7 @@ public class ExcelGenerator {
 //                    stockTickerToDataMap.put(stock.getTicker(), stock);
 //                }).blockLast();
 
-        System.out.println(stockTickerToDataMap);
+        logger.info(stockTickerToDataMap.toString());
         stopWatch.stop();
 
         stopWatch.start("write to Csv file");
@@ -88,7 +89,7 @@ public class ExcelGenerator {
         writeToExcel(stockTickerToDataMap);
         stopWatch.stop();
 
-        System.out.println(stopWatch.prettyPrint());
+        logger.info(stopWatch.prettyPrint());
 
         seekingAlpha();
     }
@@ -139,8 +140,6 @@ public class ExcelGenerator {
                 }
             }
             return workbook;
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -200,9 +199,16 @@ public class ExcelGenerator {
 //        ResponseEntity<String> data1 = restTemplate.getForEntity(fullUri, String.class);
 //        extractData(data1.getBody(), stockTicker);
         Stock stock = new Stock(stockTicker.toUpperCase(), fullUri);
-        return webClient.get().uri(fullUri).retrieve().bodyToMono(String.class).retry(MAX_RETRY).map(data -> extractData(data, stock)).doOnError(e -> {
-            logger.error("failed to retrieve on url {}", fullUri, e);
-        }).doOnRequest(t -> logger.info("doOnRequest to retrieve {}", fullUri)).onErrorReturn(stock);//                .flatMapMany(Flux::fromIterable)
+        return webClient.get()
+                .uri(fullUri)
+                .retrieve()
+                .bodyToMono(String.class)
+                .retry(MAX_RETRY)
+                .map(data -> extractData(data, stock))
+                .doOnError(e -> {
+                    logger.error("failed to retrieve on url {}", fullUri, e);
+                }).doOnRequest(t -> logger.info("doOnRequest to retrieve {}", fullUri))
+                .onErrorReturn(stock);//                .flatMapMany(Flux::fromIterable)
 
     }
 
@@ -222,12 +228,29 @@ public class ExcelGenerator {
         extractPriceData(html, stock);
         Elements elementsByClass = html.body().getElementsByClass("Ta(end) Fw(600) Lh(14px)");
         String dividendYieldText = findElement(elementsByClass, "DIVIDEND_AND_YIELD-value").text();
+
         String dividendYield = StringUtils.substringBetween(dividendYieldText, "(", "%");
-        stock.setDivYield(Double.parseDouble(dividendYield));
-        stock.setPeRatio(Double.parseDouble(findElement(elementsByClass, "PE_RATIO-value").text()));
-        stock.setEpsRatio(Double.parseDouble(findElement(elementsByClass, "EPS_RATIO-value").text()));
+        if (NumberUtils.isCreatable(dividendYield)) {
+            stock.setDivYield(Double.parseDouble(dividendYield));
+        }
+
+        if (NumberUtils.isCreatable(dividendYield)) {
+            stock.setDivYield(Double.parseDouble(dividendYield));
+        }
+
+        Element peRatio = findElement(elementsByClass, "PE_RATIO-value");
+        if (NumberUtils.isCreatable(peRatio.text())) {
+            stock.setPeRatio(Double.parseDouble(peRatio.text()));
+        }
+
+        Element epsRatio = findElement(elementsByClass, "EPS_RATIO-value");
+        if (NumberUtils.isCreatable(epsRatio.text())) {
+            stock.setEpsRatio(Double.parseDouble(epsRatio.text()));
+        }
         String marketCapValue = findElement(elementsByClass, "MARKET_CAP-value").text();
-        stock.setMarketCap(Double.parseDouble(StringUtils.substring(marketCapValue, 0, marketCapValue.length() - 1)));
+        if (NumberUtils.isCreatable(marketCapValue)) {
+            stock.setMarketCap(Double.parseDouble(StringUtils.substring(marketCapValue, 0, marketCapValue.length() - 1)));
+        }
     }
 
     private <T> void setValueIfExist(Supplier<T> getter, Consumer<T> setter) {
