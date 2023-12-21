@@ -3,9 +3,11 @@ package com.stocks.controllers;
 import com.stocks.entities.Request;
 import com.stocks.entities.Tweet;
 import com.stocks.services.SocketClient;
+import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -14,6 +16,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Function;
 import java.util.stream.IntStream;
 
 @RestController
@@ -21,7 +24,7 @@ import java.util.stream.IntStream;
 public class RoutingController {
 
     private static final Logger logger = LoggerFactory.getLogger(RoutingController.class);
-    private static final int maxRetry = 3;
+    private static final int MAX_RETRY = 3;
     @Autowired
     private WebClient webClient;
 
@@ -31,26 +34,16 @@ public class RoutingController {
     @Autowired
     private SocketClient socketClient;
 
+    @Value("${server.port}")
+    private Integer appPort;
+
 
     @GetMapping(value = "getTweetsNonBlocking")
     public List<Tweet> getTweetsNonBlocking() {
         logger.info("Starting NON-BLOCKING Controller!");
         List<Integer> userIdList = IntStream.range(1, 5).boxed().toList();
         List<Tweet> tweetList = Flux.fromIterable(userIdList)
-                .flatMap(userId -> webClient
-                                .get()
-                                .uri("http://localhost:8085/slow-service-Tweets/" + userId)
-                                .retrieve()
-                                .bodyToFlux(Tweet.class)
-//                                .retry(maxRetry)
-//                                .doOnError(e -> logger.error("failed to get data for user-id {}", userIdList.get(i)))
-                                .onErrorResume(e -> {
-                                    logger.error("failed to get data for user-id {} ERROR {}", userId, e);
-                                    return Flux.empty();
-                                })
-                                .doOnComplete(() -> logger.info("Complete to get Tweet data {} for user-id {}", userId))
-                                .doOnNext(tweet -> logger.info("doOnNext starting to get Tweet data {} for user-id {}", tweet, userId))
-
+                .flatMap(collectData()
                         , 100, 1)
                 .collectList()
                 .block();
@@ -60,6 +53,46 @@ public class RoutingController {
 //        disposableList.add(subscribe);
 
         logger.info("Exiting NON-BLOCKING Controller!");
+        return tweetList;
+    }
+
+    private Function<Integer, Publisher<? extends Tweet>> collectData() {
+        return userId -> webClient
+                .get()
+                .uri("http://localhost:" + appPort + "/slow-service-Tweets/" + userId)
+                .retrieve()
+                .bodyToFlux(Tweet.class)
+//                                .retry(MAX_RETRY)
+//                                .doOnError(e -> logger.error("failed to get data for user-id {}", userIdList.get(i)))
+                .onErrorResume(e -> {
+                    logger.error("failed to get data for user-id {} ERROR {}", userId, e);
+                    return Flux.empty();
+                })
+                .doOnComplete(() -> logger.info("Complete to get Tweet data for user-id {}", userId))
+                .doOnNext(tweet -> logger.info("doOnNext starting to get Tweet data {} for user-id {}", tweet, userId));
+    }
+
+    @GetMapping(value = "getTweetsNonBlocking-0")
+    public Flux<Tweet> getTweetsNonBlocking0() {
+        logger.info("Starting NON-BLOCKING Controller!");
+
+        return Flux.fromIterable(IntStream.range(1, 5).boxed().toList())
+                .flatMap(collectData()
+                        , 100, 1)
+                .doOnNext(tweetList -> logger.info("Exiting NON-BLOCKING Controller!"));
+    }
+
+    @GetMapping(value = "getTweetsNonBlocking-1")
+    public Flux<Tweet> getTweetsNonBlocking1() {
+        logger.info("Starting NON-BLOCKING Controller!");
+        List<Integer> userIdList = IntStream.range(1, 5).boxed().toList();
+        Flux<Tweet> tweetList = Flux.fromIterable(userIdList)
+                .flatMap(collectData());
+
+//        Disposable subscribe = TweetFlux.subscribe(Tweet -> logger.info(Tweet.toString()));
+//        disposableList.add(subscribe);
+
+        logger.info("done");
         return tweetList;
     }
 

@@ -1,6 +1,8 @@
 package com.stocks.services;
 
 import com.stocks.entities.Tweet;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,8 +10,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
 import java.text.DecimalFormat;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -28,12 +28,17 @@ import java.util.stream.Collectors;
 public class TweetTaskServiceImpl implements TweetTaskService {
 
     private static final Logger logger = LoggerFactory.getLogger(TweetTaskServiceImpl.class);
-    private static final String UPDATE_SERVICE_DEFAULTS_URL = "http://localhost:8085/slow-service-Tweets/";
+
+    @Value("${server.port}")
+    private Integer appPort;
+    private static final String UPDATE_SERVICE_DEFAULTS_URL = "http://localhost:%s/slow-service-Tweets/";
     private Map<String, AtomicInteger> serviceIdToRetryTimesMap = new ConcurrentHashMap<>();
     private DecimalFormat progressFormat = new DecimalFormat("#.#####");
     private ScheduledExecutorService executorService;
     @Value("${scheduler.thread.pool.size}")
     private Integer schedulerPoolSize;
+
+
     @Autowired
     private RestTemplate restTemplate;
 
@@ -93,7 +98,7 @@ public class TweetTaskServiceImpl implements TweetTaskService {
 
     private List<Tweet> updateServiceDefaults(final String serviceId) {
         LocalDateTime start = LocalDateTime.now();
-        List<Tweet> tweets = restTemplate.getForObject(UPDATE_SERVICE_DEFAULTS_URL + serviceId, List.class);
+        List<Tweet> tweets = restTemplate.getForObject(String.format(UPDATE_SERVICE_DEFAULTS_URL, appPort) + serviceId, List.class);
         logger.info("serviceId '{}' update successfully. total time {}", serviceId, Duration.between(start, LocalDateTime.now()));
         return tweets;
     }

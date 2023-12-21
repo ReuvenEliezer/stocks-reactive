@@ -11,7 +11,7 @@ import java.io.IOException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class StockTest {
+class StockTest {
 
     private static WebClient webClient;
 
@@ -29,7 +29,7 @@ public class StockTest {
 
 
     @Test
-    public void excelGeneratorFullDataTest() throws IOException {
+    void excelGeneratorFullDataTest() throws IOException {
 //        ExcelData excelData = ExcelData.builder()
 //                .fileName("U.S.DividendChampions-2023-02-28-5519.xlsx")
 //                .sheetName("All CCC")
@@ -49,7 +49,7 @@ public class StockTest {
     }
 
     @Test
-    public void excelGeneratorShortDataTest() throws IOException {
+    void excelGeneratorShortDataTest() throws IOException {
         ExcelData excelData = new ExcelData("U.S.DividendChampions-LIVE.xlsx", "All", 3, 0, false, true,
                 5, 6, 0);
         ExcelGenerator excelGenerator = new ExcelGenerator(webClient, excelData);
