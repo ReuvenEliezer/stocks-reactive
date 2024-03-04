@@ -2,7 +2,9 @@ package com.stocks.services;
 
 import com.stocks.entities.Request;
 import com.stocks.entities.Tweet;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.annotation.PreDestroy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.messaging.rsocket.RSocketRequester;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
@@ -10,6 +12,8 @@ import reactor.core.publisher.Mono;
 
 @Component
 public class SocketClient {
+
+    private static final Logger logger = LoggerFactory.getLogger(SocketClient.class);
 
     private final RSocketRequester rSocketRequester;
 
@@ -28,6 +32,12 @@ public class SocketClient {
         return rSocketRequester.route("getTweetsNonBlocking-1")
                 .data(request)
                 .retrieveFlux(Tweet.class);
+    }
+
+    @PreDestroy
+    void destroy() {
+        rSocketRequester.dispose();
+        logger.info("Destroying rSocketRequester");
     }
 
 }

@@ -2,8 +2,11 @@ package com.stock.services;
 
 import com.stocks.StockApp;
 import com.stocks.utils.Constants;
-import org.junit.jupiter.api.Disabled;
+import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -15,6 +18,7 @@ import org.springframework.util.MimeType;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.io.File;
 import java.nio.file.Path;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -22,36 +26,49 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(classes = StockApp.class)
 class FileUploadApplicationTests {
 
+    private static final Logger logger = LoggerFactory.getLogger(FileUploadApplicationTests.class);
+
+    private static final String FILE_NAME = "apache-maven-3.9.6-bin";
+    private static final String FILE_TYPE = "zip";
+
     @Autowired
     private RSocketRequester rSocketRequester;
 
-//    @Value("classpath:input/java_tutorial.pdf")
-//    private Resource resource;
+    @Value("${input.file.path:src/test/resources/input/" + FILE_NAME + "." + FILE_TYPE + "}")
+    private Path inputPath;
 
-
-    @Value("${output.file.path:src/test/resources/output/Docker Desktop Installer.exe}")
+    @Value("${output.file.path:src/test/resources/output/" + FILE_NAME + "." + FILE_TYPE + "}")
     private Path outputPath;
 
+
+    @BeforeEach
+    void setUp() {
+        File outputFile = outputPath.toFile();
+        if (outputFile.exists()) {
+            Assertions.assertThat(outputFile.delete()).isTrue();
+        }
+
+    }
+
     @Test
-//    @Disabled
     void uploadFileTest() {
 
         // read input file as 4096 chunks
-        Path path = Path.of("C:\\Users\\eliezerr\\Downloads\\Docker Desktop Installer.exe");
-        assertThat(path.toFile()).exists();
-        Flux<DataBuffer> readFlux = DataBufferUtils.read(path, new DefaultDataBufferFactory(), 4096)
-                .doOnNext(s -> System.out.println("Sent"));
+        assertThat(inputPath.toFile()).exists();
+        Flux<DataBuffer> readFlux = DataBufferUtils.read(inputPath, new DefaultDataBufferFactory(), 4096)
+                .doOnNext(s -> logger.info("Sent"));
 
         Mono.just(rSocketRequester)
                 .map(r -> r.route("upload-file")
                         .metadata(metadataSpec -> {
-                            metadataSpec.metadata("Docker Desktop Installer", MimeType.valueOf(Constants.MIME_FILE_NAME));
-                            metadataSpec.metadata("exe", MimeType.valueOf(Constants.MIME_FILE_EXTENSION));
+                            metadataSpec.metadata(FILE_NAME, MimeType.valueOf(Constants.MIME_FILE_NAME));
+                            metadataSpec.metadata(FILE_TYPE, MimeType.valueOf(Constants.MIME_FILE_EXTENSION));
                         })
                         .data(readFlux)
                 )
                 .flatMapMany(r -> r.retrieveFlux(String.class))
-                .doOnNext(s -> System.out.println("Upload Status : " + s))
+                .doOnNext(s -> logger.info("Upload Status : {}", s))
+                .doOnComplete(() -> logger.info("done to Upload file: from '{}' to '{}'" , inputPath, outputPath))
                 .blockLast();
 
         assertThat(outputPath.toFile()).exists();
