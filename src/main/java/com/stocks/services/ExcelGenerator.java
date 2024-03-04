@@ -43,9 +43,8 @@ public class ExcelGenerator {
     private static final String stocksTickersFileName = "stocks_tickers.txt";
     private final ExcelData excelData;
 
-    private WebClient webClient;
+    private final WebClient webClient;
 
-    @Autowired
     public ExcelGenerator(WebClient webClient, ExcelData excelData) {
         this.webClient = webClient;
         this.excelData = excelData;

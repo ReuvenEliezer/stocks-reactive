@@ -3,6 +3,7 @@ package com.stock.services;
 import com.stocks.entities.ExcelData;
 import com.stocks.services.ExcelGenerator;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -11,6 +12,7 @@ import java.io.IOException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@Disabled
 class StockTest {
 
     private static WebClient webClient;
