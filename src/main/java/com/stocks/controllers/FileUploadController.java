@@ -26,15 +26,15 @@ public class FileUploadController {
     }
 
     @MessageMapping("upload-file")
-    public Flux<String> upload(
+    public Flux<Status> upload(
             @Headers Map<String, Object> metadata,
             @Payload Flux<DataBuffer> content) throws IOException {
         var fileName = metadata.get(Constants.FILE_NAME);
         var fileExtn = metadata.get(Constants.FILE_EXTN);
         Path path = Paths.get(fileName + "." + fileExtn);
         return fileUploadService.uploadFile(path, content)
-                .flatMap(e -> Mono.just(Status.COMPLETED.getName()))
-                .onErrorResume(throwable -> Mono.just(Status.FAILED.getName()));
+                .flatMap(e -> Mono.just(Status.COMPLETED))
+                .onErrorResume(throwable -> Mono.just(Status.FAILED));
     }
 
 }

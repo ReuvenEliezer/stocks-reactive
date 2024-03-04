@@ -8,5 +8,5 @@ import java.io.IOException;
 import java.nio.file.Path;
 
 public interface FileUploadService {
-    Flux<String> uploadFile(Path path, Flux<DataBuffer> bufferFlux) throws IOException;
+    Flux<Status> uploadFile(Path path, Flux<DataBuffer> bufferFlux) throws IOException;
 }

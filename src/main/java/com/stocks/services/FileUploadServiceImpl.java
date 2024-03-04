@@ -24,7 +24,7 @@ public class FileUploadServiceImpl implements FileUploadService {
     private Path outputPath;
 
     @Override
-    public Flux<String> uploadFile(Path path, Flux<DataBuffer> bufferFlux) throws IOException {
+    public Flux<Status> uploadFile(Path path, Flux<DataBuffer> bufferFlux) throws IOException {
         Path opPath = outputPath.resolve(path);
         AsynchronousFileChannel channel = AsynchronousFileChannel
                 .open(opPath, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
@@ -32,7 +32,7 @@ public class FileUploadServiceImpl implements FileUploadService {
                 bufferFlux
 //                        bufferFlux.delayElements(Duration.ofSeconds(1))
                         , channel)
-                .map(b -> Status.CHUNK_COMPLETED.getName());
+                .map(b -> Status.CHUNK_COMPLETED);
     }
 
 
