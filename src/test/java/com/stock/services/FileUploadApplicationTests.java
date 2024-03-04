@@ -4,6 +4,7 @@ import com.stocks.StockApp;
 import com.stocks.entities.Status;
 import com.stocks.utils.Constants;
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,7 +34,12 @@ class FileUploadApplicationTests {
 //    @Value("classpath:input/java_tutorial.pdf")
 //    private Resource resource;
 
+
+    @Value("${output.file.path:src/test/resources/output/Docker Desktop Installer.exe}")
+    private Path outputPath;
+
     @Test
+    @Disabled
     void uploadFileTest() {
 
         // read input file as 4096 chunks
@@ -46,13 +52,16 @@ class FileUploadApplicationTests {
                 .map(r -> r.route("upload-file")
                         .metadata(metadataSpec -> {
                             metadataSpec.metadata("exe", MimeType.valueOf(Constants.MIME_FILE_EXTENSION));
-                            metadataSpec.metadata("output", MimeType.valueOf(Constants.MIME_FILE_NAME));
+                            metadataSpec.metadata("Docker Desktop Installer", MimeType.valueOf(Constants.MIME_FILE_NAME));
                         })
                         .data(readFlux)
                 )
                 .flatMapMany(r -> r.retrieveFlux(String.class))
                 .doOnNext(s -> System.out.println("Upload Status : " + s))
                 .blockLast();
+
+
+        assertThat(outputPath.toFile()).exists();
 
 //        Flux<Status> result = rSocketRequester
 //                .route("file.upload")

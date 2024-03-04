@@ -40,7 +40,7 @@ jobs:
         #        if: github.actor != 'dependabot[bot]' && (success() || failure())
         with:
           name: Tests - reactive-service #for analysis tests report
-          path: /target/surefire-reports/*.xml
+          path: target/surefire-reports/*.xml
           reporter: java-junit
           fail-on-error: true
 
