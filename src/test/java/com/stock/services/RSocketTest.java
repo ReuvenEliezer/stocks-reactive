@@ -24,7 +24,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 
-@SpringBootTest( classes = StockApp.class)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT, classes = StockApp.class)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class RSocketTest {
 
