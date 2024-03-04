@@ -11,8 +11,11 @@ import reactor.core.publisher.Mono;
 @Component
 public class SocketClient {
 
-    @Autowired
-    private RSocketRequester rSocketRequester;
+    private final RSocketRequester rSocketRequester;
+
+    public SocketClient(RSocketRequester rSocketRequester) {
+        this.rSocketRequester = rSocketRequester;
+    }
 
 
     public Mono<Tweet> getTweet(Request request) {

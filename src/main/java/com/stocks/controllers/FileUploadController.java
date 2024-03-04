@@ -26,14 +26,14 @@ public class FileUploadController {
     }
 
     @MessageMapping("upload-file")
-    public Flux<String> upload(@Headers Map<String, Object> metadata, @Payload Flux<DataBuffer> content) throws IOException {
+    public Flux<String> upload(
+            @Headers Map<String, Object> metadata,
+            @Payload Flux<DataBuffer> content) throws IOException {
         var fileName = metadata.get(Constants.FILE_NAME);
         var fileExtn = metadata.get(Constants.FILE_EXTN);
-//        Path path = Path.of("C:\\Users\\eliezerr\\Downloads\\NS local.run.xml");
         Path path = Paths.get(fileName + "." + fileExtn);
         return Flux.concat(fileUploadService.uploadFile(path, content), Mono.just(Status.COMPLETED.getName()))
                 .onErrorReturn(Status.FAILED.getName());
-
     }
 
 }

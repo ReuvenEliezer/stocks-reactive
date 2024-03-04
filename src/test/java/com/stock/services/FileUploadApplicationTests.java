@@ -1,27 +1,21 @@
 package com.stock.services;
 
 import com.stocks.StockApp;
-import com.stocks.entities.Status;
 import com.stocks.utils.Constants;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.core.io.Resource;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.core.io.buffer.DefaultDataBufferFactory;
 import org.springframework.messaging.rsocket.RSocketRequester;
 import org.springframework.util.MimeType;
-import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.io.File;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -39,7 +33,7 @@ class FileUploadApplicationTests {
     private Path outputPath;
 
     @Test
-    @Disabled
+//    @Disabled
     void uploadFileTest() {
 
         // read input file as 4096 chunks
@@ -51,8 +45,8 @@ class FileUploadApplicationTests {
         Mono.just(rSocketRequester)
                 .map(r -> r.route("upload-file")
                         .metadata(metadataSpec -> {
-                            metadataSpec.metadata("exe", MimeType.valueOf(Constants.MIME_FILE_EXTENSION));
                             metadataSpec.metadata("Docker Desktop Installer", MimeType.valueOf(Constants.MIME_FILE_NAME));
+                            metadataSpec.metadata("exe", MimeType.valueOf(Constants.MIME_FILE_EXTENSION));
                         })
                         .data(readFlux)
                 )
@@ -60,22 +54,7 @@ class FileUploadApplicationTests {
                 .doOnNext(s -> System.out.println("Upload Status : " + s))
                 .blockLast();
 
-
         assertThat(outputPath.toFile()).exists();
-
-//        Flux<Status> result = rSocketRequester
-//                .route("file.upload")
-//                .metadata(metadataSpec -> {
-//                    metadataSpec.metadata("pdf", MimeType.valueOf(Constants.MIME_FILE_EXTENSION));
-//                    metadataSpec.metadata("output", MimeType.valueOf(Constants.MIME_FILE_NAME));
-//                })
-//                .data(readFlux)
-//                .retrieveFlux(Status.class)
-//                .doOnNext(s -> System.out.println("Upload Status : " + s));
-////                .subscribe();
-//
-//            result.subscribe();
-//        result.blockLast();
     }
 
 }
