@@ -8,7 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 
 import java.text.DecimalFormat;
 import java.time.Duration;
@@ -40,7 +40,7 @@ public class TweetTaskServiceImpl implements TweetTaskService {
 
 
     @Autowired
-    private RestTemplate restTemplate;
+    private RestClient restClient;
 
 
     @PostConstruct()
@@ -98,7 +98,10 @@ public class TweetTaskServiceImpl implements TweetTaskService {
 
     private List<Tweet> updateServiceDefaults(final String serviceId) {
         LocalDateTime start = LocalDateTime.now();
-        List<Tweet> tweets = restTemplate.getForObject(String.format(UPDATE_SERVICE_DEFAULTS_URL, appPort) + serviceId, List.class);
+        List<Tweet> tweets = restClient.get()
+                .uri(String.format(UPDATE_SERVICE_DEFAULTS_URL, appPort) + serviceId)
+                .retrieve()
+                .body(List.class);
         logger.info("serviceId '{}' update successfully. total time {}", serviceId, Duration.between(start, LocalDateTime.now()));
         return tweets;
     }

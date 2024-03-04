@@ -8,8 +8,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
+import org.springframework.messaging.rsocket.RSocketRequester;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -25,35 +27,69 @@ public class RoutingController {
 
     private static final Logger logger = LoggerFactory.getLogger(RoutingController.class);
     private static final int MAX_RETRY = 3;
-    @Autowired
-    private WebClient webClient;
-
-    @Autowired
-    private RestTemplate restTemplate;
-
-    @Autowired
-    private SocketClient socketClient;
-
-    @Value("${server.port}")
-    private Integer appPort;
+    private final WebClient webClient;
+    private final RestClient restClient;
+    private final SocketClient socketClient;
 
 
-    @GetMapping(value = "getTweetsNonBlocking")
-    public List<Tweet> getTweetsNonBlocking() {
+    private final RSocketRequester rSocketRequester;
+    private final int appPort;
+
+    public RoutingController(WebClient webClient,
+                             RestClient restClient,
+                             SocketClient socketClient,
+                             RSocketRequester rSocketRequester,
+                             @Value("${server.port}") int appPort) {
+        this.webClient = webClient;
+        this.restClient = restClient;
+        this.socketClient = socketClient;
+        this.rSocketRequester = rSocketRequester;
+        this.appPort = appPort;
+    }
+
+//
+//    @GetMapping(value = "getTweetsNonBlocking")
+//    public List<Tweet> getTweetsNonBlocking() {
+//        logger.info("Starting NON-BLOCKING Controller!");
+//        List<Integer> userIdList = IntStream.range(1, 5).boxed().toList();
+//        List<Tweet> tweetList = Flux.fromIterable(userIdList)
+//                .flatMap(collectData()
+//                        , 100, 1)
+//                .collectList()
+//                .block();
+//
+//
+////        Disposable subscribe = TweetFlux.subscribe(Tweet -> logger.info(Tweet.toString()));
+////        disposableList.add(subscribe);
+//
+//        logger.info("Exiting NON-BLOCKING Controller!");
+//        return tweetList;
+//    }
+
+    @GetMapping("/tweets-blocking")
+    public List<Tweet> getTweetsBlocking() {
+        logger.info("Starting BLOCKING Controller!");
+        List<Tweet> tweets = restClient.get()
+                .uri("http://localhost:" + appPort + "/slow-service-Tweets/1")
+                .retrieve()
+                .body(List.class);
+//        tweets.forEach(tweet -> logger.info(tweet.toString()));
+        logger.info("Exiting BLOCKING Controller!");
+        return tweets;
+    }
+
+    @GetMapping(value = "/tweets-non-blocking", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<Tweet> getTweetsNonBlocking() {
         logger.info("Starting NON-BLOCKING Controller!");
-        List<Integer> userIdList = IntStream.range(1, 5).boxed().toList();
-        List<Tweet> tweetList = Flux.fromIterable(userIdList)
-                .flatMap(collectData()
-                        , 100, 1)
-                .collectList()
-                .block();
+        Flux<Tweet> tweetFlux = WebClient.create()
+                .get()
+                .uri("http://localhost:" + appPort + "/slow-service-Tweets/1")
+                .retrieve()
+                .bodyToFlux(Tweet.class);
 
-
-//        Disposable subscribe = TweetFlux.subscribe(Tweet -> logger.info(Tweet.toString()));
-//        disposableList.add(subscribe);
-
+        tweetFlux.subscribe(tweet -> logger.info(tweet.toString()));
         logger.info("Exiting NON-BLOCKING Controller!");
-        return tweetList;
+        return tweetFlux;
     }
 
     private Function<Integer, Publisher<? extends Tweet>> collectData() {
@@ -68,8 +104,16 @@ public class RoutingController {
                     logger.error("failed to get data for user-id {} ERROR {}", userId, e);
                     return Flux.empty();
                 })
-                .doOnComplete(() -> logger.info("Complete to get Tweet data for user-id {}", userId))
-                .doOnNext(tweet -> logger.info("doOnNext starting to get Tweet data {} for user-id {}", tweet, userId));
+                .doOnNext(tweet -> logger.info("doOnNext starting to get Tweet data {} for user-id {}", tweet, userId))
+                .doOnComplete(() -> logger.info("Complete to get Tweet data for user-id {}", userId));
+    }
+
+    @GetMapping(value = "getTweetsNonBlocking-by-rsocket")
+    public Flux<Tweet> getTweetsNonBlockingRSocket() {
+        return rSocketRequester
+                .route("getTweetsNonBlocking-3")
+                .data(new Request("key", "value"))
+                .retrieveFlux(Tweet.class);
     }
 
     @GetMapping(value = "getTweetsNonBlocking-0")
@@ -112,10 +156,11 @@ public class RoutingController {
 //            throw new RuntimeException("failed for user id: " + userId);
 //        }
         Thread.sleep(5000L); // delay
-        return Arrays.asList(
+        return List.of(
                 new Tweet("RestTemplate rules", userId + "@gmail.com"),
                 new Tweet("WebClient is better", userId + "@gmail.com"),
-                new Tweet("OK, both are useful", userId + "@gmail.com"));
+                new Tweet("OK, both are useful", userId + "@gmail.com")
+        );
     }
 
     /**

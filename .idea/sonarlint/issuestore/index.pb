@@ -60,3 +60,7 @@ c
 3src/main/java/com/stocks/services/SocketClient.java,4\0\40bb768d89bccd17dbeb535a3b3f502e6f7c0846
 S
 #.idea/sonarlint/issuestore/index.pb,9\f\9fe84ebb15faf917b7def6236dba604453cc61e0
+l
+<src/main/java/com/stocks/services/OnReadyEventFullExcel.java,5\0\5010c89797605d97eec55df788dbb61115023b44
+m
+=src/main/java/com/stocks/services/OnReadyEventShortExcel.java,b\2\b2bab870257f8af3f2f53c8f1e948bea2682b55f

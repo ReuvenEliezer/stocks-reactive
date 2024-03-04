@@ -1,13 +1,13 @@
 package com.stocks.config;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.rsocket.RSocketRequester;
 import org.springframework.messaging.rsocket.RSocketStrategies;
 import org.springframework.util.MimeTypeUtils;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.util.retry.Retry;
@@ -18,9 +18,8 @@ import java.time.Duration;
 public class WebRestConfig {
 
     @Bean
-    public RestTemplate restTemplate() {
-        return new RestTemplateBuilder()
-                .build();
+    public RestClient restClient() {
+        return RestClient.create();
     }
 
     @Bean
@@ -35,11 +34,10 @@ public class WebRestConfig {
                 .build();
     }
 
-    @Value("${spring.rsocket.server.port}")
-    private int port;
 
     @Bean
-    public RSocketRequester rSocketRequester(RSocketStrategies strategies) {
+    public RSocketRequester rSocketRequester(RSocketStrategies strategies,
+                                             @Value("${spring.rsocket.server.port}") int port) {
         return RSocketRequester.builder()
                 .rsocketStrategies(strategies)
                 .rsocketConnector(
