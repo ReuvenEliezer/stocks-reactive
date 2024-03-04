@@ -24,7 +24,7 @@ import java.nio.file.Path;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest(classes = StockApp.class)
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT, classes = StockApp.class)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 class FileUploadApplicationTests {
 
