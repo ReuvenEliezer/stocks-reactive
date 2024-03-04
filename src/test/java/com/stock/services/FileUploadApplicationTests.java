@@ -45,18 +45,17 @@ class FileUploadApplicationTests {
 
     @BeforeEach
     void setUp() {
+        assertThat(inputPath.toFile()).exists();
         File outputFile = outputPath.toFile();
         if (outputFile.exists()) {
             Assertions.assertThat(outputFile.delete()).isTrue();
+            logger.info("setUp - Deleted outputFile file: {}", outputFile);
         }
-
     }
 
     @Test
     void uploadFileTest() {
-
         // read input file as 4096 chunks
-        assertThat(inputPath.toFile()).exists();
         Flux<DataBuffer> readFlux = DataBufferUtils.read(inputPath, new DefaultDataBufferFactory(), 4096)
                 .doOnNext(s -> logger.info("Sent"));
         Status status = rSocketRequester.route("upload-file")
