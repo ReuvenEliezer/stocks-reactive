@@ -17,7 +17,6 @@ import org.springframework.messaging.rsocket.RSocketRequester;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.util.MimeType;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -59,18 +58,15 @@ class FileUploadApplicationTests {
         assertThat(inputPath.toFile()).exists();
         Flux<DataBuffer> readFlux = DataBufferUtils.read(inputPath, new DefaultDataBufferFactory(), 4096)
                 .doOnNext(s -> logger.info("Sent"));
-
-        Mono.just(rSocketRequester)
-                .map(r -> r.route("upload-file")
-                        .metadata(metadataSpec -> {
-                            metadataSpec.metadata(FILE_NAME, MimeType.valueOf(Constants.MIME_FILE_NAME));
-                            metadataSpec.metadata(FILE_TYPE, MimeType.valueOf(Constants.MIME_FILE_EXTENSION));
-                        })
-                        .data(readFlux)
-                )
-                .flatMapMany(r -> r.retrieveFlux(String.class))
+        rSocketRequester.route("upload-file")
+                .metadata(metadataSpec -> {
+                    metadataSpec.metadata(FILE_NAME, MimeType.valueOf(Constants.MIME_FILE_NAME));
+                    metadataSpec.metadata(FILE_TYPE, MimeType.valueOf(Constants.MIME_FILE_EXTENSION));
+                })
+                .data(readFlux)
+                .retrieveFlux(String.class)
                 .doOnNext(s -> logger.info("Upload Status : {}", s))
-                .doOnComplete(() -> logger.info("done to Upload file: from '{}' to '{}'" , inputPath, outputPath))
+                .doOnComplete(() -> logger.info("done to Upload file: from '{}' to '{}'", inputPath, outputPath))
                 .blockLast();
 
         assertThat(outputPath.toFile()).exists();
