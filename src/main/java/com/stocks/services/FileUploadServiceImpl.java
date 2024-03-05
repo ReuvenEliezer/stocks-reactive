@@ -1,6 +1,8 @@
 package com.stocks.services;
 
 import com.stocks.entities.Status;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferUtils;
@@ -15,6 +17,8 @@ import java.time.Duration;
 
 @Service
 public class FileUploadServiceImpl implements FileUploadService {
+
+    private static final Logger logger = LoggerFactory.getLogger(FileUploadServiceImpl.class);
 
     /**
      * https://www.vinsguru.com/rsocket-file-upload-example/
@@ -32,7 +36,9 @@ public class FileUploadServiceImpl implements FileUploadService {
                 bufferFlux
 //                        bufferFlux.delayElements(Duration.ofSeconds(1))
                         , channel)
-                .map(b -> Status.CHUNK_COMPLETED);
+                .map(b -> Status.CHUNK_COMPLETED)
+                .doOnNext(s -> logger.info("Upload Status : {}", Status.CHUNK_COMPLETED))
+                .doOnComplete(() -> logger.info("done to Upload file to '{}'", path));
     }
 
 

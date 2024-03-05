@@ -1,8 +1,8 @@
-info:
-  app:
-    name: @project.artifactId@
-    version: @project.version@
+server:
+  port: 8080
 spring:
+  application:
+    name: @project.artifactId@
 #  codec:
 #    max-in-memory-size: 3999962144MB
   profiles:
@@ -13,8 +13,7 @@ spring:
   output:
     ansi:
       enabled: always
-server:
-  port: 8080
+
 
 scheduler:
   thread:

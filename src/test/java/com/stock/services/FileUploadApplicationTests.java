@@ -65,7 +65,6 @@ class FileUploadApplicationTests {
                 })
                 .data(readFlux)
                 .retrieveFlux(Status.class)
-                .doOnNext(s -> logger.info("Upload Status : {}", s))
                 .doOnComplete(() -> logger.info("done to Upload file: from '{}' to '{}'", inputPath, outputPath))
                 .blockLast();
 

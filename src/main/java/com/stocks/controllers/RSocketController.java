@@ -31,15 +31,17 @@ public class RSocketController {
      * @return
      */
 
-    @Autowired
-    private WebClient webClient;
+    private final WebClient webClient;
+    private final int appPort;
 
-    @Value("${server.port}")
-    private Integer appPort;
+    public RSocketController(WebClient webClient, @Value("${server.port}") int appPort) {
+        this.webClient = webClient;
+        this.appPort = appPort;
+    }
 
     @MessageMapping("getTweet")
     public Mono<Tweet> getTweet(@Payload Request req) {
-//        if (1<2){
+//        if (true){
 //            throw new RuntimeException("sdjasjdhas");
 //        }
         return Mono.just(new Tweet("message", "user"))

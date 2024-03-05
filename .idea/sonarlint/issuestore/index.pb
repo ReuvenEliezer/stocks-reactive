@@ -48,8 +48,6 @@ o
 ?src/main/java/com/stocks/controllers/ExcelStocksController.java,b\0\b0877ec9b5b3fe86bf7276d3c109bf8d5fabb8ac
 a
 1src/test/java/com/stock/services/RSocketTest.java,2\d\2d2ef1614b3530cd8f8db5aa3360eeb948c866df
-g
-7src/test/java/com/stock/services/ActiveProfileTest.java,8\d\8d335a9e2d9b099df8faa09ea353722d0e8ec56e
 \
 ,src/main/java/com/stocks/entities/Event.java,4\a\4a7c6cf7507844727cfc03f017335b3d35e325e0
 b
@@ -80,5 +78,3 @@ T
 $.github/workflows/github-actions.yml,b\4\b45ec7e2ac316ab92f14615d47ddce36e9515dac
 ]
 -src/main/java/com/stocks/utils/Constants.java,d\5\d595d417e389a6097829727f4f0ecc6029179860
-h
-8src/main/java/com/stocks/entities/DataBufferWrapper.java,c\8\c8a0ff6fd54d29f3e78b6c72474d8208488f2e6e
