@@ -32,9 +32,11 @@ public class FileUploadController {
         var fileName = metadata.get(Constants.FILE_NAME);
         var fileExtn = metadata.get(Constants.FILE_EXTN);
         Path path = Paths.get(fileName + "." + fileExtn);
-        return fileUploadService.uploadFile(path, content)
-                .flatMap(e -> Mono.just(Status.COMPLETED))
-                .onErrorResume(throwable -> Mono.just(Status.FAILED));
+        return Flux.concat(fileUploadService.uploadFile(path, content), Mono.just(Status.COMPLETED))
+                .onErrorReturn(Status.FAILED);
+//        return fileUploadService.uploadFile(path, content)
+//                .flatMap(e -> Mono.just(Status.COMPLETED))
+//                .onErrorResume(throwable -> Mono.just(Status.FAILED));
     }
 
 }

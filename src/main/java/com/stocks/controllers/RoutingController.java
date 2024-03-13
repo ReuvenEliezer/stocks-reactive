@@ -1,21 +1,31 @@
 package com.stocks.controllers;
 
 import com.stocks.entities.Request;
+import com.stocks.entities.Status;
 import com.stocks.entities.Tweet;
 import com.stocks.services.SocketClient;
+import com.stocks.utils.Constants;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.core.io.buffer.DataBufferUtils;
+import org.springframework.core.io.buffer.DefaultDataBufferFactory;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.rsocket.RSocketRequester;
+import org.springframework.util.MimeType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.util.function.Tuple2;
 
+import java.nio.file.Path;
+import java.text.DecimalFormat;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
@@ -26,6 +36,7 @@ import java.util.stream.IntStream;
 public class RoutingController {
 
     private static final Logger logger = LoggerFactory.getLogger(RoutingController.class);
+    private static final DecimalFormat df = new DecimalFormat("#.##");
     private static final int MAX_RETRY = 3;
     private final WebClient webClient;
     private final RestClient restClient;
@@ -85,9 +96,10 @@ public class RoutingController {
                 .get()
                 .uri("http://localhost:" + appPort + "/slow-service-Tweets/1")
                 .retrieve()
-                .bodyToFlux(Tweet.class);
+                .bodyToFlux(Tweet.class)
+                .doOnNext(tweet -> logger.info(tweet.toString()));
 
-        tweetFlux.subscribe(tweet -> logger.info(tweet.toString()));
+//        tweetFlux.subscribe(tweet -> logger.info(tweet.toString()));
         logger.info("Exiting NON-BLOCKING Controller!");
         return tweetFlux;
     }
@@ -192,6 +204,40 @@ public class RoutingController {
     @PostMapping("print-params3")
     public void printParams3(@RequestBody String[] ids) {
         logger.info("accountIds {}", ids);
+    }
+    private static final String FILE_NAME = "apache-maven-3.9.6-bin";
+    private static final String FILE_TYPE = "zip";
+
+    /**
+     * curl -X 'GET' \
+     *   'http://localhost:8080/upload-file/C%3A%5CUsers%5Celiezerr%5CIdeaProjects%5Cstocks%5Csrc%5Ctest%5Cresources%5Cinput%5Capache-maven-3.9.6-bin.zip' \
+     *   -H 'accept: */
+    //
+
+    @GetMapping("/upload-file/{pathFile:.+}") //C:\Users\eliezerr\IdeaProjects\stocks\src\test\resources\input\apache-maven-3.9.6-bin.zip
+    public Flux<Status> uploadFile(@PathVariable String pathFile) {
+        int bufferSize = 4096;
+        Path inputPath = Path.of(pathFile);
+        long length = inputPath.toFile().length();
+        long totalChuck = length / bufferSize;
+        Flux<DataBuffer> readFlux = DataBufferUtils.read(inputPath, new DefaultDataBufferFactory(), bufferSize)
+                .doOnNext(s -> logger.info("Sent"));
+        return rSocketRequester
+                .route("upload-file")
+                .metadata(metadataSpec -> {
+                    metadataSpec.metadata(FILE_NAME, MimeType.valueOf(Constants.MIME_FILE_NAME));
+                    metadataSpec.metadata(FILE_TYPE, MimeType.valueOf(Constants.MIME_FILE_EXTENSION));
+                })
+                .data(readFlux)
+                .retrieveFlux(Status.class)
+                .index()
+                //Tuple2<Index, Status>
+                .doOnNext(tuple ->
+                        logger.info("Upload Status : {}%, {}",
+                                df.format(((double) tuple.getT1() / totalChuck) * 100),
+                                tuple.getT2()
+                        ))
+                .map(Tuple2::getT2);
     }
 
 }

@@ -18,9 +18,12 @@ import org.springframework.messaging.rsocket.RSocketRequester;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.util.MimeType;
 import reactor.core.publisher.Flux;
+import reactor.util.function.Tuple2;
 
 import java.io.File;
 import java.nio.file.Path;
+import java.text.DecimalFormat;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -42,6 +45,7 @@ class FileUploadApplicationTests {
     @Value("${output.file.path:src/test/resources/output/" + FILE_NAME + "." + FILE_TYPE + "}")
     private Path outputPath;
 
+    private static final DecimalFormat df = new DecimalFormat("#.##");
 
     @BeforeEach
     void setUp() {
@@ -56,20 +60,30 @@ class FileUploadApplicationTests {
     @Test
     void uploadFileTest() {
         // read input file as 4096 chunks
-        Flux<DataBuffer> readFlux = DataBufferUtils.read(inputPath, new DefaultDataBufferFactory(), 4096)
+        long length = inputPath.toFile().length();
+        int bufferSize = 4096;
+        long totalChuck = length / bufferSize;
+        Flux<DataBuffer> readFlux = DataBufferUtils.read(inputPath, new DefaultDataBufferFactory(), bufferSize)
                 .doOnNext(s -> logger.info("Sent"));
-        Status status = rSocketRequester.route("upload-file")
+        Flux<Status> stringFlux = rSocketRequester
+                .route("upload-file")
                 .metadata(metadataSpec -> {
                     metadataSpec.metadata(FILE_NAME, MimeType.valueOf(Constants.MIME_FILE_NAME));
                     metadataSpec.metadata(FILE_TYPE, MimeType.valueOf(Constants.MIME_FILE_EXTENSION));
                 })
                 .data(readFlux)
                 .retrieveFlux(Status.class)
-                .doOnComplete(() -> logger.info("done to Upload file: from '{}' to '{}'", inputPath, outputPath))
-                .blockLast();
+                .index()
+                //Tuple2<Index, Status>
+                .doOnNext(tuple ->
+                        logger.info("Upload Status : {}%, {}",
+                                df.format(((double) tuple.getT1() / totalChuck) * 100),
+                                tuple.getT2()
+                        ))
+                .map(Tuple2::getT2);
 
+        Status status = stringFlux.blockLast();
         assertThat(status).isEqualTo(Status.COMPLETED);
-
         assertThat(outputPath.toFile()).exists();
     }
 

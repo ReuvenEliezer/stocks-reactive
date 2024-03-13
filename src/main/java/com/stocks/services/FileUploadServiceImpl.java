@@ -36,9 +36,9 @@ public class FileUploadServiceImpl implements FileUploadService {
                 bufferFlux
 //                        bufferFlux.delayElements(Duration.ofSeconds(1))
                         , channel)
-                .map(b -> Status.CHUNK_COMPLETED)
-                .doOnNext(s -> logger.info("Upload Status : {}", Status.CHUNK_COMPLETED))
-                .doOnComplete(() -> logger.info("done to Upload file to '{}'", path));
+                .map(b -> Status.CHUNK_COMPLETED);
+//                .doOnNext(s -> logger.info("Upload Status : {}", Status.CHUNK_COMPLETED))
+//                .doOnComplete(() -> logger.info("done to Upload file to '{}'", path));
     }
 
 
