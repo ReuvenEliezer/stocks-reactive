@@ -62,7 +62,7 @@ public class RSocketController {
         return tweetList;
     }
 
-    private Function<Integer, Publisher<? extends Tweet>> collectData() {
+    private Function<Integer, Publisher<Tweet>> collectData() {
         return userId -> webClient
                 .get()
                 .uri("http://localhost:" + appPort + "/slow-service-Tweets/" + userId)
@@ -71,7 +71,7 @@ public class RSocketController {
 //                                .retry(MAX_RETRY)
 //                                .doOnError(e -> logger.error("failed to get data for user-id {}", userIdList.get(i)))
                 .onErrorResume(e -> {
-                    logger.error("failed to get data for user-id {} ERROR {}", userId, e);
+                    logger.error("failed to get data for user-id {} ERROR:", userId, e);
                     return Flux.empty();
                 })
                 .doOnComplete(() -> logger.info("Complete to get Tweet data for user-id {}", userId))

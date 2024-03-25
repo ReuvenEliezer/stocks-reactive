@@ -15,8 +15,11 @@ import java.io.IOException;
 @RequestMapping("/v1")
 public class ExcelStocksController {
 
-    @Autowired
-    private WebClient webClient;
+    private final WebClient webClient;
+
+    public ExcelStocksController(WebClient webClient) {
+        this.webClient = webClient;
+    }
 
     @GetMapping(value = "/update-data")
     public void updateData(ExcelData excelData) throws IOException {
